@@ -165,15 +165,27 @@ function formatDate(date) {
  * 1, 2024 => 8
  */
 function getCountWeekendsInMonth(month, year) {
-  let weekendsCount = 0;
-  const daysInMonth = new Date(year, month, 0).getDate();
-  for (let day = 1; day <= daysInMonth; day + 1) {
-    const dayOfWeek = new Date(year, month - 1, day).getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      weekendsCount += 1;
+  const date = new Date(year, month - 1, 1);
+  let firstWeekendDay = date.getDay();
+  const daysCount = new Date(year, month, 0).getDate();
+  let weekCount = 0;
+  let firstWeekendDate = 1;
+  if (firstWeekendDay === 0) {
+    weekCount = ((daysCount + 1) / 7) * 2;
+    return Math.floor(weekCount);
+  }
+  while (firstWeekendDay < 6) {
+    firstWeekendDay += 1;
+    firstWeekendDate += 1;
+  }
+  for (let i = firstWeekendDate; i <= daysCount; i += 7) {
+    if (i + 1 > daysCount) {
+      weekCount += 1;
+    } else {
+      weekCount += 2;
     }
   }
-  return weekendsCount;
+  return weekCount;
 }
 
 /**
@@ -250,22 +262,28 @@ function getQuarter(date) {
  * { start: '01-01-2024', end: '10-01-2024' }, 1, 1 => ['01-01-2024', '03-01-2024', '05-01-2024', '07-01-2024', '09-01-2024']
  */
 function getWorkSchedule(period, countWorkDays, countOffDays) {
-  const formatsDate = (date) =>
-    date.toLocaleDateString('en-GB').split('/').join('-');
-  const [startDay, startMonth, startYear] = period.start.split('-').map(Number);
-  const [endDay, endMonth, endYear] = period.end.split('-').map(Number);
-  const startDate = new Date(startYear, startMonth - 1, startDay);
-  const endDate = new Date(endYear, endMonth - 1, endDay);
-  const schedule = [];
-  const currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    for (let i = 0; i < countWorkDays && currentDate <= endDate; i + 1) {
-      schedule.push(formatsDate(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    currentDate.setDate(currentDate.getDate() + countOffDays);
+  const msInDay = 24 * 60 * 60 * 1000;
+  const [dayStart, monthStart, yearStart] = period.start.split('-');
+  const [dayEnd, monthEnd, yearEnd] = period.end.split('-');
+  const dateStart = new Date(yearStart, monthStart - 1, dayStart).getTime();
+  const dateEnd = new Date(yearEnd, monthEnd - 1, dayEnd).getTime();
+  let currentDate;
+  const workSchedule = [];
+  for (let i = dateStart; i <= dateEnd; i += countOffDays * msInDay) {
+    let count = countWorkDays;
+    do {
+      currentDate = new Date(i);
+      workSchedule.push(
+        `${currentDate.getDate().toString().padStart(2, '0')}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getFullYear()}`
+      );
+      if (i === dateEnd) {
+        return workSchedule;
+      }
+      i += msInDay;
+      count -= 1;
+    } while (count);
   }
-  return schedule;
+  return workSchedule;
 }
 
 /**
